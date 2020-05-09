@@ -294,6 +294,13 @@
 
   export default {
     name: "Decision",
+    mounted() {
+      this.$root.$on('name-accept-reject', () => {
+        this.$store.commit('decision_made', 'CONDITION')
+        this.currentNameObj.state = 'CONDITION'
+        this.nameAccept()
+      })
+    },
     data() {
       return {
         editTextarea: null,
