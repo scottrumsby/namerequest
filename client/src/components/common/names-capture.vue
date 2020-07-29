@@ -75,9 +75,9 @@
         <v-col cols="10" v-if="entityPhraseRequired && !editMode" class="mt-n2">
           A {{ entityType === 'CC' ? 'Community Contribution Company' : 'Cooperative'}} name must
           include (but not start with) one of the following phrases: <b>{{ entityPhraseText }}</b></v-col>
-        <v-col cols="9" v-if="!editMode">
-          You may provide up to two additional names which will be considered at no further cost, in the
-          order provided, only if your First Choice cannot be approved.
+        <v-col cols="2" v-if="isAssumedName"></v-col>
+        <v-col cols="10" class="my-1" v-if="!editMode" :class="isAssumedName ? 'bold-copy' : ''">
+          {{ mainMessage}}
         </v-col>
       </v-row>
       <transition name="fade" mode="out-in">
@@ -186,13 +186,15 @@ export default class NamesCapture extends Vue {
   mounted () {
     this.$el.addEventListener('keydown', this.handleKeydown)
     newReqModule.mutateNameChoicesToInitialState()
+    if (this.isAssumedName) {
+      this.$nextTick(function () { this.hide = true })
+      return
+    }
     this.$nextTick(function () {
       if (this.editMode) {
         this.populateNames()
         return
       }
-      // eslint-disable-next-line
-      console.log('getting past here too')
       newReqModule.mutateSubmissionType('examination')
       if (this.designationAtEnd) {
         for (let item of this.items) {
@@ -202,20 +204,14 @@ export default class NamesCapture extends Vue {
           }
           if (item) {
             if (name.endsWith(item)) {
-              // eslint-disable-next-line
-              console.log(1)
               newReqModule.mutateNameChoices({ key: 'designation1', value: item })
               let value = name.replace(item, '').trim()
-              // eslint-disable-next-line
-              console.log(2)
               newReqModule.mutateNameChoices({ key: 'name1', value })
               return
             }
           }
         }
       }
-      // eslint-disable-next-line
-      console.log(7)
       newReqModule.mutateNameChoices({ key: 'name1', value: this.name })
     })
   }
@@ -249,6 +245,9 @@ export default class NamesCapture extends Vue {
   }
 
   get autofocusField () {
+    if (this.isAssumedName) {
+      return 'name1'
+    }
     let output = 'name2'
     if (this.designationAtEnd) {
       if (!this.messages.name1 && !this.messages.des1) {
@@ -310,17 +309,37 @@ export default class NamesCapture extends Vue {
   get entityType () {
     return newReqModule.entityType
   }
-  set entityType (type: string) {
-    newReqModule.mutateEntityType(type)
-  }
   get entityTypeOptions () {
     return newReqModule.entityTypeOptions
   }
   get errors () {
     return newReqModule.errors
   }
+  get isAssumedName () {
+    return newReqModule.isAssumedName
+  }
   get isValid () {
     let { nameChoices, messages, designationAtEnd, validatePhrases } = this
+    if (this.isAssumedName) {
+      if (!nameChoices['name1']) {
+        if (!nameChoices['name2'] && !nameChoices['name3']) {
+          return false
+        }
+        if (nameChoices['name2'] || nameChoices['name3']) {
+          messages['name1'] = 'Please enter a first choice before any subsequent choices'
+          return false
+        }
+      }
+      let outcome = true
+      for (let choice of [1, 2, 3]) {
+        if (nameChoices[`name${choice}`] === this.name) {
+          messages[`name${choice}`] = 'This is identical to the name your originally entered.  Please enter a new name.'
+          this.hide = 'auto'
+          outcome = false
+        }
+      }
+      return outcome
+    }
     if (this.editMode) {
       let outcome = true
       if (designationAtEnd) {
@@ -425,11 +444,16 @@ export default class NamesCapture extends Vue {
   get location () {
     return newReqModule.location
   }
-  set location (location: LocationT) {
-    newReqModule.mutateLocation(location)
-  }
   get locationOptions () {
     return newReqModule.locationOptions
+  }
+  get mainMessage () {
+    if (this.isAssumedName) {
+      return `${this.name}  is  too similar to a name already in use.  Please enter a new name such as your corporation
+    number`
+    }
+    return `You may provide up to two additional names which will be considered at no further cost, in the
+          order provided, only if your First Choice cannot be approved.`
   }
   get name () {
     return newReqModule.name
@@ -437,20 +461,26 @@ export default class NamesCapture extends Vue {
   get nameChoices () {
     return newReqModule.nameChoices
   }
+  get nr () {
+    return newReqModule.nr
+  }
   get requestAction () {
     return newReqModule.requestAction
+  }
+  get requestTypeOptions () {
+    return newReqModule.requestTypeOptions
+  }
+  set entityType (type: string) {
+    newReqModule.mutateEntityType(type)
+  }
+  set location (location: LocationT) {
+    newReqModule.mutateLocation(location)
   }
   set requestAction (value: string) {
     newReqModule.mutateRequestAction(value)
     if (value === 'INFO') {
       newReqModule.mutatePickRequestTypeModalVisible(true)
     }
-  }
-  get nr () {
-    return newReqModule.nr
-  }
-  get requestTypeOptions () {
-    return newReqModule.requestTypeOptions
   }
 
   activateHMCModal () {
@@ -461,8 +491,6 @@ export default class NamesCapture extends Vue {
   }
   autoCapitalize (key: string) {
     let value = sanitizeName(this.nameChoices[key])
-    // eslint-disable-next-line
-    console.log(8)
     newReqModule.mutateNameChoices({ key, value })
   }
   clearErrors () {

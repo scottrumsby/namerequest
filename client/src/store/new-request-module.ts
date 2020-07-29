@@ -338,6 +338,7 @@ export class NewRequestModule extends VuexModule {
   extendedRequestType: SelectOptionsI | null = null
   getNameReservationFailed: boolean = false
   helpMeChooseModalVisible: boolean = false
+  isAssumedName: boolean = false
   isPersonsName: boolean = false
   issueIndex: number = 0
   location: LocationT = 'BC'
@@ -654,7 +655,7 @@ export class NewRequestModule extends VuexModule {
   get nrRequestNames (): RequestNameI[] {
     const { nameChoices, nrNames } = this
     const defaultValues = {
-      name_type_cd: 'CO',
+      name_type_cd: this.isAssumedName ? 'AS' : 'CO',
       consent_words: '',
       conflict1: '',
       conflict1_num: ''
@@ -1028,8 +1029,6 @@ export class NewRequestModule extends VuexModule {
   async patchNameRequests () {
     try {
       let nr = this.editNameReservation
-      // eslint-disable-next-line
-      console.log(nr)
 
       let response = await axios.patch(`/namerequests/${this.nr.nrNum}`, nr, {
         headers: {
@@ -1279,6 +1278,10 @@ export class NewRequestModule extends VuexModule {
   @Mutation
   mutateAssumedName (value) {
     this.assumedName = value
+  }
+  @Mutation
+  mutateIsAssumedName (value) {
+    this.isAssumedName = value
   }
   @Mutation
   mutateChangesInBaseName (newVal) {

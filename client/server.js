@@ -24,8 +24,6 @@ server.get('/api/v1/stats', (req, res) => {
 })
 
 server.get('/api/v1/namerequests', (req, res) => {
-  // eslint-disable-next-line
-  console.log(req)
   let resp = {
     "additionalInfo": "More info",
     "applicants": {
